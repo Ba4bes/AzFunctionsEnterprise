@@ -1,0 +1,82 @@
+name: Deploy Azure Function
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FUNCTION_NAME: GenerateStorageAccount07    # This name needs to be globally unique
+  SCRIPT_PATH: '.'      # set this to the path where your PowerShell code is stored.
+  RESOURCE_GROUP: AzureFunctionsEnterprise # An existing resource group to store the code in
+  LOCATION: 'westeurope'
+
+#Define permissions for the Azure token
+permissions:
+      id-token: write
+      contents: read
+      
+jobs: 
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v3
+    
+    - name: 'Az CLI login'
+      uses: azure/login@v1
+      with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+
+          
+    - name: Deploy Bicep template
+      uses: Azure/arm-deploy@v1.0.8
+      with:
+        # Provide the scope of the deployment. Valid values are: 'resourcegroup', 'managementgroup', 'subscription'
+        scope: resourcegroup
+        # Provide the name of a resource group, only required for resource Group deployments.
+        resourceGroupName: ${{ env.RESOURCE_GROUP }}
+        # Specify the path or URL to the Azure Resource Manager template.
+        template: DeployFunction.bicep
+        # Supply deployment parameter values.
+        parameters: "functionName=${{ env.FUNCTION_NAME }} versionTag=GitHubActions"
+    
+      # Get the publish profile
+    - name: Collect the Publish Profile
+      uses: aliencube/publish-profile-actions@v1.2.0
+      id: publishprofile
+      with:
+        # Resource group name.
+        resourceGroupName: ${{ env.RESOURCE_GROUP }}
+        # App instance name.
+        appName: ${{ env.FUNCTION_NAME }}
+   
+   # Deploy the Code
+    - name: Deploy the Function
+      uses: Azure/functions-action@v1.4.6
+      with:
+        # Name of the Azure Function App
+        app-name: ${{ env.FUNCTION_NAME }}
+        # Path to package or folder. *.zip or a folder to deploy
+        package: ${{ env.SCRIPT_PATH }}
+        # Publish profile (*.publishsettings) file contents with web deploy secrets
+        publish-profile: ${{ steps.publishprofile.outputs.profile }} 
+     
+
+    - name: Reset the publish profile
+      uses: aliencube/publish-profile-actions@v1.2.0
+      with:
+        # Resource group name.
+        resourceGroupName: ${{ env.RESOURCE_GROUP }}
+        # App instance name.
+        appName: ${{ env.FUNCTION_NAME }}
+        # Value indicating whether to reset the publish profile or not.        
+        reset: true
+        
+        
+    
+   

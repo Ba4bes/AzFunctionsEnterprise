@@ -1,0 +1,33 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "Request",
+      "methods": [
+        "get",
+        "post"
+      ]
+    },
+    {
+      "name": "Adjectives",
+      "type": "blob",
+      "direction": "in",
+      "path": "wordlists/adjectives.txt",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "name": "Nouns",
+      "type": "blob",
+      "direction": "in",
+      "path": "wordlists/nouns.txt",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "Response"
+    }
+  ]
+}
